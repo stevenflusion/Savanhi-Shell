@@ -70,11 +70,17 @@ type Model struct {
 	// Cursor position for lists
 	Cursor int
 
-	// Available items for selection
+	// Available items for selection (themes or fonts depending on screen)
 	Items []string
 
 	// Selected items (for multi-select)
 	Selected map[string]bool
+
+	// Theme selection
+	SelectedTheme string
+
+	// Font selection
+	SelectedFont string
 
 	// Loading state
 	Loading        bool
@@ -125,6 +131,19 @@ func (m Model) WithPersister(p persistence.Persister) Model {
 // WithPreferences sets the user preferences.
 func (m Model) WithPreferences(prefs *persistence.Preferences) Model {
 	m.Preferences = prefs
+	return m
+}
+
+// WithThemes sets the available themes for selection.
+func (m Model) WithThemes(themes []string) Model {
+	m.Items = themes
+	return m
+}
+
+// WithFonts sets the available fonts for selection.
+func (m Model) WithFonts(fonts []string) Model {
+	// Store fonts separately - Items is used for current screen
+	// This will be used when transitioning to font selection screen
 	return m
 }
 

@@ -26,6 +26,31 @@ const (
 	BundledThemesDir = "themes"
 )
 
+// bundledThemeNames is the list of themes bundled with Savanhi Shell.
+var bundledThemeNames = []string{
+	"paradox",
+	"powerlevel10k_rainbow",
+	"powerlevel10k_lean",
+	"agnoster",
+	"atomic",
+	"captivity",
+	"darkblood",
+	"fish",
+	"jandedobbeleer",
+	"marcduiker",
+	"microverse-power",
+	"minimal",
+	"negligible",
+	"night-owl",
+	"powerline",
+}
+
+// GetBundledThemes returns the list of bundled theme names.
+// This function can be called without instantiating a ThemeProvider.
+func GetBundledThemes() []string {
+	return bundledThemeNames
+}
+
 // Common errors for theme preview operations.
 var (
 	// ErrThemeNotFound indicates the theme was not found.

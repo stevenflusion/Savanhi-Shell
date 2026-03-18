@@ -18,6 +18,7 @@ import (
 	"github.com/savanhi/shell/internal/detector"
 	"github.com/savanhi/shell/internal/errors"
 	"github.com/savanhi/shell/internal/persistence"
+	"github.com/savanhi/shell/internal/preview"
 	"github.com/savanhi/shell/internal/tui"
 )
 
@@ -298,11 +299,20 @@ func runTUI(ctx context.Context) error {
 		}
 	}
 
+	// Load available themes and fonts
+	themes := preview.GetBundledThemes()
+	fonts := preview.GetRecommendedFonts()
+
 	// Create TUI model
 	model := tui.NewModel().
 		WithDetector(result).
 		WithPersister(p).
-		WithPreferences(prefs)
+		WithPreferences(prefs).
+		WithThemes(themes)
+
+	// Store fonts for later use (font selection screen)
+	// Fonts will be loaded when transitioning to font selection screen
+	_ = fonts // Will be used when font selection is implemented
 
 	// Create Bubble Tea program
 	pProgram := tea.NewProgram(

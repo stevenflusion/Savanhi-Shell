@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/savanhi/shell/internal/detector"
+	"github.com/savanhi/shell/internal/preview"
 )
 
 // handleKeyPress handles key press events.
@@ -79,6 +80,9 @@ func (m Model) handleThemeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.Items) > 0 && m.Cursor < len(m.Items) {
 			// Store selected theme
 			m.Selected["theme"] = true // Mark theme as selected
+			m.SelectedTheme = m.Items[m.Cursor]
+			// Load fonts for font selection screen
+			m.Items = preview.GetRecommendedFonts()
 			m.CurrentScreen = ScreenFontSelect
 			m.Cursor = 0
 		}

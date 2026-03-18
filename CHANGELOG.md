@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Preview validation now accepts Fish as a valid shell type
 - Subshell spawning now uses correct Fish shell flags (-l for login, no -i)
+- Theme selector now displays bundled themes (was empty before)
+- Font selector now displays recommended Nerd Fonts
 
 ## [1.0.0] - 2024-01-XX
 
