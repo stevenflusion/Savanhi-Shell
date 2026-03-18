@@ -1,0 +1,212 @@
+# GoReleaser configuration for Savanhi Shell
+# https://goreleaser.com
+
+project_name: savanhi-shell
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: savanhi-shell
+    main: ./cmd/savanhi-shell
+    binary: savanhi-shell
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - "7"
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.gitCommit={{.Commit}}
+      - -X main.buildDate={{.Date}}
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: default
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+      - docs/**
+    replacements:
+      darwin: macOS
+      linux: Linux
+      windows: Windows
+      amd64: x86_64
+      arm64: arm64
+
+checksum:
+  name_template: "{{ .ProjectName }}-{{ .Version }}-checksums.txt"
+  algorithm: sha256
+
+signs:
+  - id: default
+    artifacts: checksum
+    cmd: gpg
+    stdin: "{{ .IsSnapshot }}"
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
+release:
+  github:
+    owner: savanhi
+    name: shell
+  draft: true
+  prerelease: auto
+  mode: append
+  name_template: "{{ .ProjectName }} {{ .Version }}"
+  header: |
+    ## Savanhi Shell {{ .Version }}
+    
+    Shell environment configuration tool with beautiful TUI.
+  footer: |
+    ## Installation
+    
+    ### Homebrew (macOS/Linux)
+    ```bash
+    brew install savanhi/tap/savanhi-shell
+    ```
+    
+    ### One-liner
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/savanhi/shell/main/scripts/install.sh | bash
+    ```
+    
+    ### Manual Download
+    Download the binary for your platform from the assets below.
+    
+    ## Changes
+    See [CHANGELOG.md](CHANGELOG.md) for details.
+
+scoop:
+  bucket:
+    owner: savanhi
+    name: scoop-bucket
+  homepage: https://github.com/savanhi/shell
+  description: Shell environment configuration tool with beautiful TUI
+  license: MIT
+
+homebrew:
+  - name: savanhi-shell
+    tap:
+      owner: savanhi
+      name: homebrew-tap
+      branch: main
+    folder: Formula
+    homepage: https://github.com/savanhi/shell
+    description: Shell environment configuration tool with beautiful TUI
+    license: MIT
+    install: |-
+      bin.install "savanhi-shell"
+    test: |-
+      system "#{bin}/savanhi-shell", "--version"
+
+nfpms:
+  - id: default
+    package_name: savanhi-shell
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    homepage: https://github.com/savanhi/shell
+    description: Shell environment configuration tool with beautiful TUI
+    maintainer: Savanhi Team <team@savanhi.dev>
+    license: MIT
+    vendor: Savanhi
+    formats:
+      - deb
+      - rpm
+      - apk
+    dependencies:
+      - git
+    recommends:
+      - fzf
+      - zoxide
+      - bat
+      - eza
+    contents:
+      - src: ./README.md
+        dst: /usr/share/doc/savanhi-shell/README.md
+      - src: ./LICENSE
+        dst: /usr/share/doc/savanhi-shell/LICENSE
+
+snapcrafts:
+  - id: default
+    name: savanhi-shell
+    title: Savanhi Shell
+    summary: Shell environment configuration tool
+    description: |
+      Savanhi Shell is a beautiful TUI application for configuring your shell
+      environment with themes, fonts, and productivity tools.
+    grade: stable
+    confinement: classic
+    license: MIT
+    base: core22
+    apps:
+      savanhi-shell:
+        command: savanhi-shell
+        plugs:
+          - home
+          - network
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - "^style:"
+      - "^refactor:"
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: Breaking Changes
+      regexp: "^.*break[(\\w)]*:+.*$"
+      order: 2
+    - title: Others
+      order: 999
+
+dockers:
+  - id: savanhi-shell
+    image_templates:
+      - "ghcr.io/savanhi/shell:{{ .Version }}"
+      - "ghcr.io/savanhi/shell:latest"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .Commit }}"
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+
+announce:
+  twitter:
+    enabled: false
+    message_template: "🚀 Savanhi Shell {{ .Version }} released! Check it out: {{ .ReleaseURL }}"
