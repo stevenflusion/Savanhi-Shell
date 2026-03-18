@@ -58,6 +58,8 @@ const (
 	TerminalTypeKonsole TerminalType = "konsole"
 	// TerminalTypeVSCode represents VS Code integrated terminal.
 	TerminalTypeVSCode TerminalType = "vscode"
+	// TerminalTypeFoot represents Foot terminal (Wayland).
+	TerminalTypeFoot TerminalType = "foot"
 	// TerminalTypeUnknown represents an unknown terminal.
 	TerminalTypeUnknown TerminalType = "unknown"
 )

@@ -93,6 +93,27 @@ func (d *terminalDetector) detectTerminalType() (TerminalType, string) {
 		return TerminalTypeVSCode, "VS Code"
 	}
 
+	// Check for foot terminal (Wayland)
+	if term := os.Getenv("TERM"); term == "foot" || term == "foot-extra" {
+		return TerminalTypeFoot, "foot"
+	}
+
+	// Check for Wayland session with common Wayland terminals
+	if os.Getenv("WAYLAND_DISPLAY") != "" {
+		// Check TERM for Wayland terminals
+		term := os.Getenv("TERM")
+		switch term {
+		case "foot", "foot-extra":
+			return TerminalTypeFoot, "foot"
+		case "alacritty":
+			return TerminalTypeAlacritty, "Alacritty"
+		case "kitty":
+			return TerminalTypeKitty, "Kitty"
+		case "wezterm":
+			return TerminalTypeWezTerm, "WezTerm"
+		}
+	}
+
 	// Fallback to TERM variable
 	term := os.Getenv("TERM")
 	if strings.Contains(term, "xterm") || strings.Contains(term, "screen") {

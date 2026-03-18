@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fish-specific environment variable escaping in preview sessions
 - Dynamic RC file path messages in TUI install success screen
 - Preview screen now shows selected theme, font, and system info
+- Foot terminal detection for Wayland users
+- Detection of current shell session (not just default shell) via $FISH_VERSION, $ZSH_VERSION, $BASH_VERSION
 
 ### Changed
 - Preview engine now supports Fish shell with proper config.fish temp files
@@ -21,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installer verification now correctly identifies Fish RC file paths (~/.config/fish/config.fish)
 - TUI install screen displays shell-appropriate RC source commands
 - Preview screen displays actual configuration instead of placeholder text
+- Shell detection now detects current session shell instead of only default shell
+- Terminal detection now recognizes Wayland terminals (foot, etc.)
 
 ### Fixed
 - Preview validation now accepts Fish as a valid shell type
