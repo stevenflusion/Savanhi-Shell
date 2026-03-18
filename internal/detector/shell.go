@@ -24,20 +24,28 @@ func (d *shellDetector) Detect() (*ShellInfo, error) {
 		IsDefault: false,
 	}
 
-	// Get the current shell from SHELL environment variable
+	// First, try to detect the CURRENT shell (not just the default)
+	// by checking shell-specific environment variables
+	currentShellPath := d.detectCurrentShell()
+
+	// Fall back to SHELL environment variable (user's default shell)
 	shellPath := os.Getenv("SHELL")
 	if shellPath == "" {
-		// Fallback to detecting from other methods
 		shellPath = "/bin/bash" // Default fallback
 	}
 
-	info.Path = shellPath
+	// Use current shell if detected, otherwise use default
+	if currentShellPath != "" {
+		info.Path = currentShellPath
+	} else {
+		info.Path = shellPath
+	}
 
 	// Get available shells from /etc/shells
 	info.AvailableShells = d.parseEtcShells()
 
 	// Determine shell name from path
-	info.Name = d.getShellTypeFromPath(shellPath)
+	info.Name = d.getShellTypeFromPath(info.Path)
 
 	// Get shell version
 	info.Version = d.getShellVersion(string(info.Name))
@@ -53,6 +61,43 @@ func (d *shellDetector) Detect() (*ShellInfo, error) {
 	info.IsDefault = d.isDefaultShell(shellPath)
 
 	return info, nil
+}
+
+// detectCurrentShell attempts to detect the currently running shell
+// by checking shell-specific environment variables.
+// This is more accurate than $SHELL which only shows the default shell.
+func (d *shellDetector) detectCurrentShell() string {
+	// Check for Fish shell
+	if fishVersion := os.Getenv("FISH_VERSION"); fishVersion != "" {
+		// We're in Fish - find the fish binary
+		if fishPath, err := exec.LookPath("fish"); err == nil {
+			return fishPath
+		}
+		return "/usr/bin/fish" // Common location
+	}
+
+	// Check for Zsh
+	if zshVersion := os.Getenv("ZSH_VERSION"); zshVersion != "" {
+		if zshPath, err := exec.LookPath("zsh"); err == nil {
+			return zshPath
+		}
+		return "/bin/zsh"
+	}
+
+	// Check for Bash
+	if bashVersion := os.Getenv("BASH_VERSION"); bashVersion != "" {
+		// BASH_VERSION is set, but we need the path
+		if bashPath := os.Getenv("BASH"); bashPath != "" {
+			return bashPath
+		}
+		if bashPath, err := exec.LookPath("bash"); err == nil {
+			return bashPath
+		}
+		return "/bin/bash"
+	}
+
+	// No shell-specific variable found - will fall back to $SHELL
+	return ""
 }
 
 // parseEtcShells reads and parses /etc/shells.
