@@ -38,6 +38,8 @@ Thumbs.db
 *.log
 .env
 .env.local
+savanhi-shell
+savanhi-shell-*
 
 # Test coverage
 coverage.html

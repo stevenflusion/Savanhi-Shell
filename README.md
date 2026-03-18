@@ -281,20 +281,39 @@ savanhi-shell/
 
 ## 🛠️ Development
 
+### Quick Start (Development)
+
+```bash
+# Clone and build
+git clone https://github.com/stevenflusion/Savanhi-Shell.git
+cd Savanhi-Shell
+make build
+
+# Run the TUI
+./savanhi-shell
+
+# Or just detect your system (no changes)
+./savanhi-shell --detect
+
+# Run tests
+make test
+```
+
 ### Prerequisites
 
 - Go 1.21+
-- Make
+- Make (optional, for Makefile commands)
 
 ### Commands
 
 ```bash
 make build          # Build for current platform
-make build-all      # Build for all platforms
+make build-all      # Build for all platforms (cross-compile)
 make test           # Run tests
 make coverage       # Run tests with coverage
 make lint           # Run linter
 make clean          # Clean build artifacts
+make install        # Install to /usr/local/bin (requires sudo)
 ```
 
 ### Testing
@@ -308,6 +327,9 @@ go test ./... -cover
 
 # Run E2E tests
 go test ./tests/e2e/... -v
+
+# Run specific package
+go test ./internal/detector/... -v
 ```
 
 ## 🤝 Contributing
