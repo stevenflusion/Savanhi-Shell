@@ -13,12 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fish shell detection in preview engine validation
 - Fish-specific environment variable escaping in preview sessions
 - Dynamic RC file path messages in TUI install success screen
+- Preview screen now shows selected theme, font, and system info
 
 ### Changed
 - Preview engine now supports Fish shell with proper config.fish temp files
 - Preview session RC generation includes Fish-specific system config sourcing
 - Installer verification now correctly identifies Fish RC file paths (~/.config/fish/config.fish)
 - TUI install screen displays shell-appropriate RC source commands
+- Preview screen displays actual configuration instead of placeholder text
 
 ### Fixed
 - Preview validation now accepts Fish as a valid shell type

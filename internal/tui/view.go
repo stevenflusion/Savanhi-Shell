@@ -201,12 +201,48 @@ func (m Model) renderPreview() string {
 	b.WriteString(styles.Title.Render("Preview"))
 	b.WriteString("\n\n")
 
-	// Preview placeholder
-	b.WriteString(styles.Box.Render(
-		styles.Info.Render("Preview will show your selected configuration") + "\n\n" +
-			styles.Muted.Render("Press Enter to install or Esc to go back"),
-	))
+	// Build preview content
+	var content strings.Builder
 
+	// Show selected theme
+	content.WriteString(styles.Subtitle.Render("Selected Configuration"))
+	content.WriteString("\n\n")
+
+	// Theme
+	content.WriteString(styles.DetectionBox.Label.Render("Theme:"))
+	content.WriteString(" ")
+	if m.SelectedTheme != "" {
+		content.WriteString(styles.DetectionBox.Value.Render(m.SelectedTheme))
+	} else {
+		content.WriteString(styles.Warning.Render("None selected"))
+	}
+	content.WriteString("\n")
+
+	// Font
+	content.WriteString(styles.DetectionBox.Label.Render("Font:"))
+	content.WriteString(" ")
+	if m.SelectedFont != "" {
+		content.WriteString(styles.DetectionBox.Value.Render(m.SelectedFont))
+	} else {
+		content.WriteString(styles.Warning.Render("None selected"))
+	}
+	content.WriteString("\n")
+
+	// Shell info
+	if m.systemInfo != nil {
+		content.WriteString("\n")
+		content.WriteString(styles.Subtitle.Render("System"))
+		content.WriteString("\n")
+		content.WriteString(styles.DetectionBox.Label.Render("Shell:"))
+		content.WriteString(" ")
+		content.WriteString(styles.DetectionBox.Value.Render(m.systemInfo.Shell))
+		content.WriteString("\n")
+	}
+
+	content.WriteString("\n")
+	content.WriteString(styles.Muted.Render("Press Enter to install or Esc to go back"))
+
+	b.WriteString(styles.Box.Render(content.String()))
 	b.WriteString("\n\n")
 	b.WriteString(m.renderFooter())
 

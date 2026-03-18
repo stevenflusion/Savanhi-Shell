@@ -118,6 +118,7 @@ func (m Model) handleFontSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.Items) > 0 && m.Cursor < len(m.Items) {
 			// Store selected font
 			m.Selected["font"] = true // Mark font as selected
+			m.SelectedFont = m.Items[m.Cursor]
 			m.CurrentScreen = ScreenPreview
 			m.Cursor = 0
 		}
@@ -127,6 +128,8 @@ func (m Model) handleFontSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if IsCancelKey(msg) {
 		m.CurrentScreen = ScreenThemeSelect
 		m.Cursor = 0
+		// Restore themes list
+		m.Items = preview.GetBundledThemes()
 		return m, nil
 	}
 
