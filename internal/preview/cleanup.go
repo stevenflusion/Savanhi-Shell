@@ -120,6 +120,7 @@ func (p *PreviewSafetyChecker) ValidateConfig(config *PreviewConfig) error {
 	validShells := map[shell.ShellType]bool{
 		shell.ShellTypeBash: true,
 		shell.ShellTypeZsh:  true,
+		shell.ShellTypeFish: true,
 	}
 	if !validShells[config.Shell] {
 		return fmt.Errorf("%w: unsupported shell type %s",

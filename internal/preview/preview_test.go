@@ -476,7 +476,7 @@ func TestPreviewSafetyChecker(t *testing.T) {
 		}{
 			{"bash", shell.ShellTypeBash, false},
 			{"zsh", shell.ShellTypeZsh, false},
-			{"fish", shell.ShellTypeFish, true},
+			{"fish", shell.ShellTypeFish, false},
 			{"empty", shell.ShellType(""), true},
 		}
 

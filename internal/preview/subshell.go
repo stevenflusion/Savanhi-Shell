@@ -266,7 +266,8 @@ func (s *DefaultSubsheller) validateConfig(config *SubshellConfig) error {
 	validShells := map[shell.ShellType]bool{
 		shell.ShellTypeBash: true,
 		shell.ShellTypeZsh:  true,
-		// fish and pwsh support is limited
+		shell.ShellTypeFish: true,
+		// pwsh support is limited
 	}
 
 	if !validShells[config.ShellType] {
@@ -326,6 +327,9 @@ func (s *DefaultSubsheller) createTempFiles(config *SubshellConfig) (string, str
 	if config.ShellType == shell.ShellTypeZsh {
 		rcFilename = ".zshrc"
 	}
+	if config.ShellType == shell.ShellTypeFish {
+		rcFilename = "config.fish"
+	}
 
 	tempRCFile := filepath.Join(tempDir, rcFilename)
 	if err := os.WriteFile(tempRCFile, []byte(rcContent), 0644); err != nil {
@@ -352,15 +356,27 @@ func (s *DefaultSubsheller) generateMinimalRC(config *SubshellConfig) string {
 	case shell.ShellTypeZsh:
 		sb.WriteString("# Source minimal zsh functions\n")
 		sb.WriteString("[ -f /etc/zsh/zshenv ] && source /etc/zsh/zshenv\n")
+
+	case shell.ShellTypeFish:
+		// Fish has its own config directory structure
+		// System-wide config is at /etc/fish/config.fish
+		sb.WriteString("# Source minimal fish functions\n")
+		sb.WriteString("[ -f /etc/fish/config.fish ] && source /etc/fish/config.fish\n")
 	}
 
 	// Add environment variables
 	if config.Environment != nil {
 		sb.WriteString("\n# Preview environment variables\n")
 		for key, value := range config.Environment {
-			// Escape special characters in value
-			escaped := s.escapeShellValue(value)
-			sb.WriteString(fmt.Sprintf("export %s='%s'\n", key, escaped))
+			if config.ShellType == shell.ShellTypeFish {
+				// Fish uses "set -x VAR value" syntax
+				escaped := s.escapeFishValue(value)
+				sb.WriteString(fmt.Sprintf("set -x %s \"%s\"\n", key, escaped))
+			} else {
+				// Bash/Zsh use "export VAR=value" syntax
+				escaped := s.escapeShellValue(value)
+				sb.WriteString(fmt.Sprintf("export %s='%s'\n", key, escaped))
+			}
 		}
 	}
 
@@ -378,6 +394,15 @@ func (s *DefaultSubsheller) escapeShellValue(value string) string {
 	// Escape single quotes and backslashes
 	value = strings.ReplaceAll(value, `\`, `\\`)
 	value = strings.ReplaceAll(value, `'`, `'\''`)
+	return value
+}
+
+// escapeFishValue escapes special characters for Fish shell environment variables.
+func (s *DefaultSubsheller) escapeFishValue(value string) string {
+	// Escape backslashes first
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	// Escape double quotes
+	value = strings.ReplaceAll(value, `"`, `\"`)
 	return value
 }
 
@@ -401,13 +426,13 @@ func (s *DefaultSubsheller) buildCommand(ctx context.Context, shellPath string, 
 	// Build arguments
 	args := []string{}
 
-	// Add login shell flag for proper environment setup
-	if config.ShellType == shell.ShellTypeZsh {
+	// Add login shell flag for proper environment setup (zsh and fish)
+	if config.ShellType == shell.ShellTypeZsh || config.ShellType == shell.ShellTypeFish {
 		args = append(args, "-l")
 	}
 
-	// Add interactive flag
-	if config.Command == "" {
+	// Add interactive flag (fish doesn't use -i, interactive is default)
+	if config.Command == "" && config.ShellType != shell.ShellTypeFish {
 		args = append(args, "-i")
 	}
 

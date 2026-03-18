@@ -393,8 +393,11 @@ func (v *Verifier) VerifyRCFile(ctx context.Context, shellType string) (*Verific
 
 	// RC file check depends on shell type
 	rcPath := filepath.Join(v.context.HomeDir, ".zshrc")
-	if shellType == "bash" {
+	switch shellType {
+	case "bash":
 		rcPath = filepath.Join(v.context.HomeDir, ".bashrc")
+	case "fish":
+		rcPath = filepath.Join(v.context.HomeDir, ".config", "fish", "config.fish")
 	}
 
 	// Check 1: RC file exists

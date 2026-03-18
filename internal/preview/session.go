@@ -357,6 +357,9 @@ func (m *DefaultSessionManager) createTempFiles(config *PreviewConfig) (string, 
 	if config.Shell == shell.ShellTypeZsh {
 		rcFilename = ".zshrc"
 	}
+	if config.Shell == shell.ShellTypeFish {
+		rcFilename = "config.fish"
+	}
 
 	tempRCFile := tempDir + "/" + rcFilename
 

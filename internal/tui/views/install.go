@@ -44,6 +44,9 @@ type InstallModel struct {
 	// viewMode is the current view mode (progress, success, error).
 	viewMode string
 
+	// shellType is the detected shell type (bash, zsh, fish).
+	shellType string
+
 	// styles are the UI styles.
 	styles InstallStyles
 
@@ -294,7 +297,10 @@ func (m InstallModel) renderSuccessView() string {
 
 	// Next steps
 	b.WriteString(m.styles.Step.Render("Next steps:\n"))
-	b.WriteString("  1. Restart your shell or run: source ~/.zshrc (or ~/.bashrc)\n")
+
+	// Get the appropriate RC source command based on shell type
+	rcSource := getRCPathMessage(m.shellType)
+	b.WriteString(fmt.Sprintf("  1. Restart your shell or run: %s\n", rcSource))
 	b.WriteString("  2. Choose a theme: savanhi theme list\n")
 	b.WriteString("  3. Configure your preferences: savanhi config\n")
 	b.WriteString("\n")
@@ -431,4 +437,23 @@ func (v *InstallView) GetStyles() InstallStyles {
 // SetStyles sets the styles.
 func (v *InstallView) SetStyles(styles InstallStyles) {
 	v.styles = styles
+}
+
+// SetShellType sets the shell type for the install model.
+func (m *InstallModel) SetShellType(shellType string) {
+	m.shellType = shellType
+}
+
+// getRCPathMessage returns the appropriate RC file source command based on shell type.
+func getRCPathMessage(shellType string) string {
+	switch shellType {
+	case "fish":
+		return "source ~/.config/fish/config.fish"
+	case "bash":
+		return "source ~/.bashrc"
+	case "zsh":
+		return "source ~/.zshrc"
+	default:
+		return "source ~/.zshrc (or ~/.bashrc)"
+	}
 }

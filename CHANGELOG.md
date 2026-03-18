@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-03-18
+
+### Added
+- Fish shell support for theme previews and RC file manipulation
+- `FishShell` implementation in `pkg/shell/fish.go` with proper `set -x VAR value` syntax
+- Fish shell detection in preview engine validation
+- Fish-specific environment variable escaping in preview sessions
+- Dynamic RC file path messages in TUI install success screen
+
+### Changed
+- Preview engine now supports Fish shell with proper config.fish temp files
+- Preview session RC generation includes Fish-specific system config sourcing
+- Installer verification now correctly identifies Fish RC file paths (~/.config/fish/config.fish)
+- TUI install screen displays shell-appropriate RC source commands
+
+### Fixed
+- Preview validation now accepts Fish as a valid shell type
+- Subshell spawning now uses correct Fish shell flags (-l for login, no -i)
+
 ## [1.0.0] - 2024-01-XX
 
 ### Added
@@ -64,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 1.0.1 | 2026-03-18 | Fish shell support |
 | 1.0.0 | 2024-01-XX | Initial public release |
 | 0.9.0-beta | 2024-01-XX | Beta testing release |
 | 0.1.0-alpha | 2024-01-XX | Initial development release |
@@ -100,6 +120,7 @@ savanhi-shell
 
 ---
 
+[1.0.1]: https://github.com/savanhi/shell/releases/tag/v1.0.1
 [1.0.0]: https://github.com/savanhi/shell/releases/tag/v1.0.0
 [0.9.0-beta]: https://github.com/savanhi/shell/releases/tag/v0.9.0-beta
 [0.1.0-alpha]: https://github.com/savanhi/shell/releases/tag/v0.1.0-alpha
