@@ -392,14 +392,6 @@ func TestHandleThemeSelectKeysActions(t *testing.T) {
 			wantCursor:   0,
 			wantSelected: true,
 		},
-		{
-			name:       "escape goes back to plugin select",
-			key:        tea.KeyMsg{Type: tea.KeyEsc},
-			cursor:     1,
-			items:      []string{"theme1", "theme2"},
-			wantScreen: ScreenPluginSelect,
-			wantCursor: 0,
-		},
 	}
 
 	for _, tt := range tests {
@@ -424,6 +416,51 @@ func TestHandleThemeSelectKeysActions(t *testing.T) {
 				if !m.Selected["theme"] {
 					t.Error("expected theme to be selected")
 				}
+			}
+		})
+	}
+}
+
+func TestHandleThemeSelectKeysBackNavigation(t *testing.T) {
+	tests := []struct {
+		name       string
+		shellName  string
+		wantScreen Screen
+	}{
+		{
+			name:       "escape goes back to plugin select for zsh",
+			shellName:  "zsh",
+			wantScreen: ScreenPluginSelect,
+		},
+		{
+			name:       "escape goes back to detect for bash",
+			shellName:  "bash",
+			wantScreen: ScreenDetect,
+		},
+		{
+			name:       "escape goes back to detect for fish",
+			shellName:  "fish",
+			wantScreen: ScreenDetect,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewModel()
+			m.CurrentScreen = ScreenThemeSelect
+			m.Cursor = 1
+			m.Items = []string{"theme1", "theme2"}
+			m.DetectorResult = &detector.DetectorResult{
+				Shell: &detector.ShellInfo{
+					Name: detector.ShellType(tt.shellName),
+				},
+			}
+
+			newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+			m = newModel.(Model)
+
+			if m.CurrentScreen != tt.wantScreen {
+				t.Errorf("expected screen %v, got %v", tt.wantScreen, m.CurrentScreen)
 			}
 		})
 	}

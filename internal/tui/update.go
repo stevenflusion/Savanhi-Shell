@@ -66,9 +66,10 @@ func (m Model) handleDetectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		// Skip directly to theme selection for non-zsh shells (bash, fish, etc.)
+		// Themes are already loaded via WithThemes() in main.go, so Items is populated
 		m.CurrentScreen = ScreenThemeSelect
 		m.Cursor = 0
-		m.Items = []string{} // Will be populated by theme selection screen
+		// DO NOT clear Items - themes already loaded via WithThemes()
 		return m, nil
 	}
 
@@ -174,7 +175,14 @@ func (m Model) handleThemeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if IsCancelKey(msg) {
-		m.CurrentScreen = ScreenPluginSelect
+		// Back navigation depends on shell type
+		// For zsh: go back to PluginSelect
+		// For non-zsh: go back to Detect (since PluginSelect was skipped)
+		if m.DetectorResult != nil && m.DetectorResult.Shell != nil && string(m.DetectorResult.Shell.Name) == "zsh" {
+			m.CurrentScreen = ScreenPluginSelect
+		} else {
+			m.CurrentScreen = ScreenDetect
+		}
 		m.Cursor = 0
 		return m, nil
 	}
