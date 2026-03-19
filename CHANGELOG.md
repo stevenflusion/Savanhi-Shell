@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-19
+
+### Added
+- **Zsh Plugins Support**: Install and manage zsh-autosuggestions and zsh-syntax-highlighting
+- `PluginInstaller` with OMZ/Homebrew/Git Clone installation strategies
+- `PluginDetector` for detecting existing plugin installations
+- `ScreenPluginSelect` in TUI flow for plugin selection
+- `--install-plugins` CLI flag for non-interactive plugin installation
+- RCModifier plugin injection methods with section markers
+- Oh My Zsh detection: `HasOhMyZsh()`, `GetOhMyZshPluginDir()`
+- Zsh version check: `GetZshVersion()`, `IsZshVersionCompatible()`
+- Plugins array parsing: `ParsePluginsArray()`, `AddToPluginsArray()`, `RemoveFromPluginsArray()`
+- Guaranteed ordering: zsh-syntax-highlighting always sourced last
+- Comprehensive unit and integration tests for plugin installation
+
+### Changed
+- TUI flow now includes plugin selection screen after system detection
+- CLI help updated with `--install-plugins` documentation
+- README and docs/getting-started.md updated with plugin features
+
+### Installation Methods
+- **Oh My Zsh**: Plugins added to `plugins=()` array (preferred)
+- **Homebrew**: Plugins installed via `brew install` (macOS/Linux)
+- **Git Clone**: Fallback method, clones to `~/.zsh/plugins/`
+
 ## [1.0.1] - 2026-03-18
 
 ### Added
