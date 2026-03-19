@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/savanhi/shell/internal/detector"
 	"github.com/savanhi/shell/internal/installer"
 )
 
@@ -107,19 +108,49 @@ func TestHandleWelcomeKeys(t *testing.T) {
 }
 
 func TestHandleDetectKeys(t *testing.T) {
-	m := NewModel()
-	m.CurrentScreen = ScreenDetect
-
-	// Test enter key moves to plugin select (new flow)
-	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	m = newModel.(Model)
-
-	if m.CurrentScreen != ScreenPluginSelect {
-		t.Errorf("expected screen PluginSelect, got %v", m.CurrentScreen)
+	tests := []struct {
+		name       string
+		shellName  string
+		wantScreen Screen
+	}{
+		{
+			name:       "zsh moves to plugin select",
+			shellName:  "zsh",
+			wantScreen: ScreenPluginSelect,
+		},
+		{
+			name:       "bash skips plugin select",
+			shellName:  "bash",
+			wantScreen: ScreenThemeSelect,
+		},
+		{
+			name:       "fish skips plugin select",
+			shellName:  "fish",
+			wantScreen: ScreenThemeSelect,
+		},
 	}
 
-	if cmd != nil {
-		t.Error("expected no command from PluginSelect transition")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewModel()
+			m.CurrentScreen = ScreenDetect
+			m.DetectorResult = &detector.DetectorResult{
+				Shell: &detector.ShellInfo{
+					Name: detector.ShellType(tt.shellName),
+				},
+			}
+
+			newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+			m = newModel.(Model)
+
+			if m.CurrentScreen != tt.wantScreen {
+				t.Errorf("expected screen %v, got %v", tt.wantScreen, m.CurrentScreen)
+			}
+
+			if cmd != nil {
+				t.Error("expected no command from transition")
+			}
+		})
 	}
 }
 

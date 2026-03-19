@@ -57,10 +57,18 @@ func (m Model) handleWelcomeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // handleDetectKeys handles key presses on the detection screen.
 func (m Model) handleDetectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if IsSelectionKey(msg) || IsConfirmKey(msg) {
-		// Move to plugin selection after confirming detection
-		m.CurrentScreen = ScreenPluginSelect
+		// Skip plugin selection for non-zsh shells
+		// Zsh plugins (zsh-autosuggestions, zsh-syntax-highlighting) only work with zsh
+		if m.DetectorResult != nil && m.DetectorResult.Shell != nil && string(m.DetectorResult.Shell.Name) == "zsh" {
+			// Move to plugin selection for zsh users
+			m.CurrentScreen = ScreenPluginSelect
+			m.Cursor = 0
+			return m, nil
+		}
+		// Skip directly to theme selection for non-zsh shells (bash, fish, etc.)
+		m.CurrentScreen = ScreenThemeSelect
 		m.Cursor = 0
-		// Plugin detection will be done externally and passed to the model
+		m.Items = []string{} // Will be populated by theme selection screen
 		return m, nil
 	}
 
