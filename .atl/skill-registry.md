@@ -21,7 +21,7 @@
 | When building REST APIs with Django - ViewSets, Serializers, Filters | django-drf | /home/steven/.config/opencode/skills/django-drf/SKILL.md |
 | When writing Java 21 code using records, sealed types, or virtual threads | java-21 | /home/steven/.config/opencode/skills/java-21/SKILL.md |
 | When building or refactoring Spring Boot 3 applications | spring-boot-3 | /home/steven/.config/opencode/skills/spring-boot-3/SKILL.md |
-| When structuring Java apps by Domain/Application/Infrastructure, or refactoring toward clean architecture | hexagonal-architecture-layers-java | /home/steven/.config/opencode/skills/hexagonal-architecture-layers-java/SKILL.md |
+| When structuring Java apps by Domain/Application/Infrastructure, or refactoring toward clean architecture | hexagonal-architecture-layers-java | /home/steven/.config/openerate/skills/hexagonal-architecture-layers-java/SKILL.md |
 | During Elixir code review, refactoring sessions, or when writing Phoenix/Ecto code | elixir-antipatterns | /home/steven/.config/opencode/skills/elixir-antipatterns/SKILL.md |
 | When building desktop apps, working with Electron main/renderer processes, IPC communication, or native integrations | electron | /home/steven/.config/opencode/skills/electron/SKILL.md |
 | When building mobile apps, working with React Native components, using Expo, React Navigation, or NativeWind | react-native | /home/steven/.config/opencode/skills/react-native/SKILL.md |
@@ -30,27 +30,77 @@
 
 ## Project Conventions
 
-No project convention files found. This is a new project with only PRD.md present.
+### Tech Stack
+- **Language**: Go 1.24.2 (requires 1.21+)
+- **TUI Framework**: Bubble Tea (charmbracelet/bubbletea v1.3.10)
+- **Styling**: Lipgloss (charmbracelet/lipgloss v1.1.0)
+- **UI Components**: Bubbles (charmbracelet/bubbles v1.0.0)
+- **Testing**: teatest (charmbracelet/x/exp/teatest), standard go test with race detection
+- **Build**: Make + goreleaser for cross-platform releases
 
-## Stack Detection
+### Architecture Patterns
+- **TUI Pattern**: Bubble Tea with Screen enum for navigation (`internal/tui/model.go`)
+- **Detection Pattern**: Detector interface with DetectAll() (`internal/detector/`)
+- **Verification Pattern**: Verifier struct with VerifyComplete() (`internal/installer/verify.go`)
+- **Persistence Pattern**: JSON files in ~/.config/savanhi/ (`internal/persistence/`)
 
-Based on PRD.md:
-- **Primary Language**: Go 1.21+
-- **TUI Framework**: Bubble Tea (Charm)
-- **Styling**: Lipgloss
-- **Configuration**: JSON
-- **Target**: Terminal ecosystem configurator with real-time preview
+### Code Style
+- Standard Go formatting (gofmt)
+- golangci-lint for linting
+- Race detection in tests (`go test -race`)
+- Coverage tracking with Codecov
+
+### Key Directories
+```
+cmd/savanhi-shell/     # Entry point + CLI flags
+internal/
+├── cli/               # Non-interactive CLI
+├── detector/          # OS/Shell/Terminal detection
+├── errors/            # Error handling with exit codes
+├── installer/         # Installation engine + Verifier
+├── persistence/       # JSON preferences & history
+├── preview/           # Live subshell preview
+├── staging/           # Change staging system
+└── tui/               # Bubble Tea interface
+    ├── model.go       # Screen enum, Model struct
+    ├── view.go        # Render methods per screen
+    ├── update.go      # Key handlers per screen
+    └── styles/        # Lipgloss ColorPalette & styles
+pkg/shell/             # Public shell interface
+configs/bundled/       # Bundled oh-my-posh themes
+tests/e2e/             # End-to-end tests
+```
+
+### Adding New TUI Screen (Pattern)
+1. Add constant to `Screen` enum in `internal/tui/model.go`
+2. Add render method in `internal/tui/views/`: `renderNewScreen()`
+3. Add key handler in `internal/tui/update.go`: `handleNewScreenKeys()`
+4. Add cases in `View()` and `handleKeyPress()` switches
+5. Add navigation from/to other screens as needed
+
+### Testing TUI (Pattern)
+- Use `teatest` for testing Bubble Tea models
+- Test model updates: `model, cmd := Update(msg)`
+- Test view output: `view := View()` string comparison
 
 ## Relevant Skills for This Project
 
-| Skill | Relevance |
-|-------|-----------|
-| **go-testing** | HIGH - Go testing patterns including Bubbletea TUI testing with teatest |
-| skill-creator | MEDIUM - May need to create project-specific skills |
-| github-pr | LOW - For PR workflow when contributing |
+| Skill | Relevance | When to Use |
+|-------|-----------|-------------|
+| **go-testing** | HIGH | All Go test files, TUI testing with teatest |
+| skill-creator | MEDIUM | Creating project-specific skills for patterns |
+| github-pr | LOW | PR workflow for contributions |
+
+## SDD Context
+
+SDD initialized with `engram` mode for artifact persistence.
+
+**Engram Topic Key**: `sdd-init/savanhi-shell`
 
 ## Notes
 
-- Project is in early stage (PRD only)
-- Primary skill: `go-testing` for TUI testing with Bubbletea/teatest
-- No linters, test frameworks, or CI configuration detected yet
+- Project follows standard Go project layout
+- TUI uses Bubble Tea's Elm Architecture (Model-Update-View)
+- All existing screens follow the same pattern (model.go, view.go, update.go)
+- Verifier in `internal/installer/verify.go` already has component verification logic to reuse for Health Dashboard
+- CI: GitHub Actions with test matrix (Go 1.21/1.22, ubuntu/macos)

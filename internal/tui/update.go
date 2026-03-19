@@ -32,6 +32,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleInstallKeys(msg)
 	case ScreenComplete:
 		return m.handleCompleteKeys(msg)
+	case ScreenHealthDashboard:
+		return m.handleHealthDashboardKeys(msg)
 	case ScreenError:
 		return m.handleErrorKeys(msg)
 	default:
@@ -57,6 +59,16 @@ func (m Model) handleDetectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.CurrentScreen = ScreenThemeSelect
 		return m, nil
 	}
+
+	// 'h' or 'H' to go to Health Dashboard
+	switch msg.String() {
+	case "h", "H":
+		m.CurrentScreen = ScreenHealthDashboard
+		m.Loading = true
+		m.LoadingMessage = "Running health checks..."
+		return m, RunHealthCheck()
+	}
+
 	return m, nil
 }
 
@@ -195,6 +207,49 @@ func (m Model) handleErrorKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if IsQuitKey(msg) {
 		m.Quitting = true
 		return m, tea.Quit
+	}
+
+	return m, nil
+}
+
+// handleHealthDashboardKeys handles key presses on the health dashboard screen.
+// Supports: R (refresh), E (export), Q/Esc (quit/back).
+func (m Model) handleHealthDashboardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "r", "R":
+		// Refresh health check
+		return m, RunHealthCheck()
+
+	case "e", "E":
+		// Export health report
+		if m.HealthData != nil && m.HealthData.ExportPath != "" {
+			err := ExportHealthReport(m.HealthData, m.HealthData.ExportPath)
+			if err != nil {
+				m.Error = err
+				m.CurrentScreen = ScreenError
+				return m, nil
+			}
+		}
+		return m, nil
+
+	case "q", "Q":
+		// Quit
+		m.Quitting = true
+		return m, tea.Quit
+
+	case "esc":
+		// Go back to previous screen (Detect or Welcome)
+		if m.DetectorResult != nil {
+			m.CurrentScreen = ScreenDetect
+		} else {
+			m.CurrentScreen = ScreenWelcome
+		}
+		return m, nil
+
+	case "?":
+		// Show help (for now, just stay on screen)
+		// TODO: Implement help modal
+		return m, nil
 	}
 
 	return m, nil

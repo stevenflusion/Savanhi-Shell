@@ -188,6 +188,8 @@ Options:
   --dry-run              Preview changes without applying
   --detect               Only run system detection
   --verify               Verify existing installation
+  --health               Run terminal health dashboard
+  --health --quick       Output health report as JSON (non-interactive)
   --rollback             Rollback last installation
   --rollback-original    Restore to original state
   --verbose              Enable verbose output
@@ -212,6 +214,24 @@ EOF
 # Run non-interactive
 savanhi-shell --non-interactive --config config.json
 ```
+
+### Health Check
+
+Run the terminal health dashboard to diagnose terminal capabilities and verify your installation:
+
+```bash
+# Run interactive health dashboard
+savanhi-shell --health
+
+# Output health report as JSON (non-interactive)
+savanhi-shell --health --quick
+```
+
+The health dashboard shows:
+- **Terminal capabilities**: true color support, ligatures, hyperlinks, Kitty graphics
+- **Installed components**: oh-my-posh, Nerd Fonts, tools status
+- **Font test**: Nerd Font glyph rendering validation
+- **Color test**: terminal color mode detection (truecolor, 256-color, ANSI-16)
 
 ## ⌨️ Key Bindings
 

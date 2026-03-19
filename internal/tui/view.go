@@ -327,6 +327,7 @@ func (m Model) renderFooter() string {
 		keys = append(keys, styles.FormatKey("Enter", "Continue"))
 	case ScreenDetect:
 		keys = append(keys, styles.FormatKey("Enter", "Continue"))
+		keys = append(keys, styles.FormatKey("H", "Health"))
 		keys = append(keys, styles.FormatKey("Esc", "Back"))
 	case ScreenThemeSelect, ScreenFontSelect:
 		keys = append(keys, styles.FormatKey("↑↓", "Navigate"))
@@ -379,4 +380,315 @@ func FormatStatus(label, value string, success bool) string {
 		labelStyle.Render(label),
 		valueStyle.Render(value),
 	)
+}
+
+// renderHealthDashboard renders the health dashboard screen.
+func (m Model) renderHealthDashboard() string {
+	var b strings.Builder
+
+	// Title with help hint
+	titleLine := styles.Title.Render("Terminal Health Dashboard")
+	helpHint := styles.Muted.Render("[?]Help")
+	b.WriteString("\n")
+	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, titleLine, "   ", helpHint))
+	b.WriteString("\n\n")
+
+	// Check if health data is available
+	if m.HealthData == nil {
+		b.WriteString(styles.Info.Render("Loading health information..."))
+		b.WriteString("\n\n")
+		b.WriteString(m.renderHealthFooter())
+		return b.String()
+	}
+
+	// Section 1: Terminal Capabilities
+	b.WriteString(m.renderTerminalCapabilitiesSection())
+	b.WriteString("\n")
+
+	// Section 2: Installed Components
+	b.WriteString(m.renderInstalledComponentsSection())
+	b.WriteString("\n")
+
+	// Section 3: Font Test
+	b.WriteString(m.renderFontTestSection())
+	b.WriteString("\n")
+
+	// Section 4: Color Test
+	b.WriteString(m.renderColorTestSection())
+	b.WriteString("\n")
+
+	// Footer with keybindings
+	b.WriteString(m.renderHealthFooter())
+
+	return b.String()
+}
+
+// renderTerminalCapabilitiesSection renders the terminal capabilities section.
+func (m Model) renderTerminalCapabilitiesSection() string {
+	var content strings.Builder
+
+	content.WriteString(styles.HealthBox.SectionTitle.Render("TERMINAL CAPABILITIES"))
+	content.WriteString("\n")
+
+	if m.HealthData.Terminal == nil {
+		content.WriteString(styles.Warning.Render("  Not detected"))
+		return styles.HealthBox.Container.Render(content.String())
+	}
+
+	caps := m.HealthData.Terminal
+
+	// True Color
+	content.WriteString(formatCapabilityLine("True Color", caps.TrueColor, "24-bit color support"))
+	content.WriteString("\n")
+
+	// Ligatures
+	content.WriteString(formatCapabilityLine("Ligatures", caps.Ligatures, "Font ligatures enabled"))
+	content.WriteString("\n")
+
+	// Hyperlinks
+	content.WriteString(formatCapabilityLine("Hyperlinks", caps.Hyperlinks, "OSC8 hyperlinks"))
+	content.WriteString("\n")
+
+	// Kitty Graphics
+	content.WriteString(formatCapabilityLine("Kitty Graphics", caps.KittyGraphics, "Kitty image protocol"))
+
+	return styles.HealthBox.Container.Render(content.String())
+}
+
+// renderInstalledComponentsSection renders the installed components section.
+func (m Model) renderInstalledComponentsSection() string {
+	var content strings.Builder
+
+	content.WriteString(styles.HealthBox.SectionTitle.Render("INSTALLED COMPONENTS"))
+	content.WriteString("\n")
+
+	if m.HealthData.Components == nil || len(m.HealthData.Components) == 0 {
+		content.WriteString(styles.Warning.Render("  No components detected"))
+		return styles.HealthBox.Container.Render(content.String())
+	}
+
+	// Display components in a consistent order
+	componentOrder := []string{"oh-my-posh", "fonts", "zoxide", "fzf", "bat", "eza"}
+
+	displayedCount := 0
+	for _, name := range componentOrder {
+		if status, ok := m.HealthData.Components[name]; ok {
+			content.WriteString(formatComponentLine(status))
+			content.WriteString("\n")
+			displayedCount++
+		}
+	}
+
+	// Display any remaining components not in the ordered list
+	for name, status := range m.HealthData.Components {
+		found := false
+		for _, orderedName := range componentOrder {
+			if orderedName == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			content.WriteString(formatComponentLine(status))
+			content.WriteString("\n")
+			displayedCount++
+		}
+	}
+
+	if displayedCount == 0 {
+		content.WriteString(styles.Warning.Render("  No components detected"))
+	}
+
+	return styles.HealthBox.Container.Render(content.String())
+}
+
+// renderFontTestSection renders the font test section.
+func (m Model) renderFontTestSection() string {
+	var content strings.Builder
+
+	content.WriteString(styles.HealthBox.SectionTitle.Render("FONT TEST"))
+	content.WriteString("\n")
+
+	if m.HealthData.FontTest == nil {
+		content.WriteString(styles.Warning.Render("  Font test not available"))
+		return styles.HealthBox.Container.Render(content.String())
+	}
+
+	fontTest := m.HealthData.FontTest
+
+	// Display test glyphs
+	var glyphDisplay strings.Builder
+	if fontTest.GlyphsRendered {
+		// Show a few representative glyphs
+		glyphs := fontTest.TestGlyphs
+		if len(glyphs) >= 4 {
+			glyphDisplay.WriteString(" ")
+			glyphDisplay.WriteString(glyphs[0]) // folder
+			glyphDisplay.WriteString("  ")
+			glyphDisplay.WriteString(glyphs[1]) // file
+			glyphDisplay.WriteString("  ")
+			glyphDisplay.WriteString(glyphs[10]) // check
+			glyphDisplay.WriteString("  ")
+			glyphDisplay.WriteString(glyphs[11]) // cross
+			glyphDisplay.WriteString(" ")
+		}
+
+		content.WriteString(styles.HealthBox.Item.Render(
+			styles.StatusStyle.Success.Render(glyphDisplay.String()) + "   All glyphs render correctly",
+		))
+	} else {
+		content.WriteString(styles.HealthBox.Item.Render(
+			styles.StatusStyle.Warning.Render("[ASCII fallback]") + "   Some glyphs may not render",
+		))
+	}
+
+	return styles.HealthBox.Container.Render(content.String())
+}
+
+// renderColorTestSection renders the color test section.
+func (m Model) renderColorTestSection() string {
+	var content strings.Builder
+
+	content.WriteString(styles.HealthBox.SectionTitle.Render("COLOR TEST"))
+	content.WriteString("\n")
+
+	if m.HealthData.ColorTest == nil {
+		content.WriteString(styles.Warning.Render("  Color test not available"))
+		return styles.HealthBox.Container.Render(content.String())
+	}
+
+	colorTest := m.HealthData.ColorTest
+
+	// Display color mode
+	var modeDesc string
+	switch colorTest.ColorMode {
+	case "truecolor":
+		modeDesc = "True color (24-bit)"
+	case "256":
+		modeDesc = "256-color mode"
+	default:
+		modeDesc = "ANSI 16-color mode"
+	}
+
+	// Generate a simple color gradient representation
+	gradient := generateColorGradient(colorTest.ColorMode)
+	content.WriteString(styles.HealthBox.Item.Render(gradient + "  " + modeDesc))
+
+	return styles.HealthBox.Container.Render(content.String())
+}
+
+// renderHealthFooter renders the footer with keybindings for the health dashboard.
+func (m Model) renderHealthFooter() string {
+	var b strings.Builder
+
+	b.WriteString(styles.FooterStyle.Render("─"))
+	b.WriteString("\n")
+
+	// Key hints
+	keys := []string{
+		styles.FormatKey("R", "Refresh"),
+		styles.FormatKey("E", "Export"),
+		styles.FormatKey("Q", "Quit"),
+	}
+
+	b.WriteString(strings.Join(keys, "  "))
+	b.WriteString("\n")
+
+	return b.String()
+}
+
+// formatCapabilityLine formats a single capability line with status.
+func formatCapabilityLine(name string, enabled bool, description string) string {
+	var statusIcon string
+	var statusStyle lipgloss.Style
+
+	if enabled {
+		statusIcon = "✓"
+		statusStyle = styles.StatusStyle.Success
+	} else {
+		statusIcon = "✗"
+		statusStyle = styles.StatusStyle.Error
+	}
+
+	// Format: "  ✓ True Color      24-bit color support"
+	return fmt.Sprintf("  %s %-15s %s",
+		statusStyle.Render(statusIcon),
+		styles.HealthBox.Value.Render(name),
+		styles.HealthBox.Label.Render(description),
+	)
+}
+
+// formatComponentLine formats a single component status line.
+func formatComponentLine(status *ComponentStatus) string {
+	if status == nil {
+		return ""
+	}
+
+	var statusIcon string
+	var statusStyle lipgloss.Style
+
+	if status.Installed {
+		statusIcon = "✓"
+		statusStyle = styles.StatusStyle.Success
+	} else {
+		statusIcon = "✗"
+		statusStyle = styles.StatusStyle.Error
+	}
+
+	// Format: "  ✓ oh-my-posh     v19.2.0  /usr/local/bin/oh-my-posh"
+	// Or:     "  ✗ bat            NOT INSTALLED"
+	var line strings.Builder
+	line.WriteString("  ")
+	line.WriteString(statusStyle.Render(statusIcon))
+	line.WriteString(" ")
+
+	// Name (padded)
+	name := status.Name
+	if len(name) > 15 {
+		name = name[:15]
+	}
+	line.WriteString(fmt.Sprintf("%-15s", styles.HealthBox.Value.Render(name)))
+
+	if status.Installed && status.Version != "" {
+		line.WriteString(" ")
+		line.WriteString(styles.HealthBox.Label.Render(status.Version))
+	} else if !status.Installed {
+		line.WriteString(" ")
+		line.WriteString(styles.Warning.Render("NOT INSTALLED"))
+	}
+
+	// Show issues if any
+	if len(status.Issues) > 0 {
+		line.WriteString("  ")
+		line.WriteString(styles.Warning.Render(status.Issues[0]))
+	}
+
+	return line.String()
+}
+
+// generateColorGradient generates a color gradient string based on color mode.
+func generateColorGradient(colorMode string) string {
+	// Generate ANSI color gradient based on terminal capability
+	switch colorMode {
+	case "truecolor":
+		// True color gradient (24-bit)
+		var gradient strings.Builder
+		for i := 0; i < 16; i++ {
+			r := i * 16
+			g := 100 + i*8
+			b := 200 - i*10
+			gradient.WriteString(fmt.Sprintf("\x1b[38;2;%d;%d;%dm█\x1b[0m", r, g, b))
+		}
+		return gradient.String()
+	case "256":
+		// 256-color gradient
+		var gradient strings.Builder
+		for i := 16; i < 32; i++ {
+			gradient.WriteString(fmt.Sprintf("\x1b[38;5;%dm█\x1b[0m", i))
+		}
+		return gradient.String()
+	default:
+		// ANSI 16-color fallback
+		return "\x1b[31m█\x1b[32m█\x1b[33m█\x1b[34m█\x1b[35m█\x1b[36m█\x1b[0m"
+	}
 }

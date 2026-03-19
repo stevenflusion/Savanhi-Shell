@@ -20,6 +20,7 @@ const (
 	ScreenPreview
 	ScreenInstall
 	ScreenComplete
+	ScreenHealthDashboard
 	ScreenError
 )
 
@@ -39,6 +40,8 @@ func (s Screen) String() string {
 		return "Install"
 	case ScreenComplete:
 		return "Complete"
+	case ScreenHealthDashboard:
+		return "HealthDashboard"
 	case ScreenError:
 		return "Error"
 	default:
@@ -59,6 +62,9 @@ type Model struct {
 
 	// User preferences
 	Preferences *persistence.Preferences
+
+	// Health dashboard data
+	HealthData *HealthData
 
 	// Detected system information (for display)
 	systemInfo *SystemInfo
@@ -181,6 +187,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Loading = true
 		m.LoadingMessage = msg.Message
 		return m, nil
+
+	case HealthCheckCompleteMsg:
+		m.HealthData = msg.Data
+		m.Loading = false
+		if msg.Err != nil {
+			m.Error = msg.Err
+			m.CurrentScreen = ScreenError
+		}
+		return m, nil
 	}
 
 	return m, tea.Batch(cmds...)
@@ -207,6 +222,8 @@ func (m Model) View() string {
 		return m.renderInstall()
 	case ScreenComplete:
 		return m.renderComplete()
+	case ScreenHealthDashboard:
+		return m.renderHealthDashboard()
 	case ScreenError:
 		return m.renderError()
 	default:

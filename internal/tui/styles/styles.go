@@ -208,6 +208,50 @@ var DetectionBox = struct {
 		Bold(true),
 }
 
+// HealthBox styles for health dashboard display.
+var HealthBox = struct {
+	Container    lipgloss.Style
+	Section      lipgloss.Style
+	SectionTitle lipgloss.Style
+	Item         lipgloss.Style
+	Label        lipgloss.Style
+	Value        lipgloss.Style
+	Success      lipgloss.Style
+	Error        lipgloss.Style
+	Warning      lipgloss.Style
+}{
+	Container: lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorPalette.Accent).
+		Padding(1, 2).
+		Width(80),
+	Section: lipgloss.NewStyle().
+		Margin(1, 0).
+		Padding(0, 1),
+	SectionTitle: lipgloss.NewStyle().
+		Foreground(ColorPalette.Primary).
+		Bold(true).
+		MarginBottom(1),
+	Item: lipgloss.NewStyle().
+		Margin(0, 1),
+	Label: lipgloss.NewStyle().
+		Foreground(ColorPalette.Muted).
+		Width(15).
+		Align(lipgloss.Right),
+	Value: lipgloss.NewStyle().
+		Foreground(ColorPalette.Foreground).
+		Bold(true),
+	Success: lipgloss.NewStyle().
+		Foreground(ColorPalette.Success).
+		Bold(true),
+	Error: lipgloss.NewStyle().
+		Foreground(ColorPalette.Error).
+		Bold(true),
+	Warning: lipgloss.NewStyle().
+		Foreground(ColorPalette.Warning).
+		Bold(true),
+}
+
 // ButtonStyle for interactive buttons.
 var ButtonStyle = struct {
 	Normal   lipgloss.Style

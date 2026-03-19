@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -262,4 +263,138 @@ func TestPreviewFlow(t *testing.T) {
 	t.Log("Preview flow test - placeholder for actual implementation")
 	// Preview requires TUI interaction which is harder to test in E2E
 	// This would typically be tested with Docker + expect scripts
+}
+
+// TestHealthFlag tests the --health --quick CLI flag for non-interactive JSON output.
+// Note: --health alone requires a TTY and cannot be tested in CI environment.
+func TestHealthFlag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
+	}
+
+	projectRoot := getProjectRoot(t)
+
+	tmpDir, err := os.MkdirTemp("", "savanhi-health-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Build binary - must run from project root
+	binaryPath := filepath.Join(tmpDir, "savanhi-shell")
+	buildCmd := exec.Command("go", "build", "-o", binaryPath, "./cmd/savanhi-shell")
+	buildCmd.Dir = projectRoot
+	if output, err := buildCmd.CombinedOutput(); err != nil {
+		t.Fatalf("Failed to build binary: %v\n%s", err, output)
+	}
+
+	// Create test home
+	homeDir := filepath.Join(tmpDir, "home")
+	if err := os.MkdirAll(homeDir, 0755); err != nil {
+		t.Fatalf("Failed to create home dir: %v", err)
+	}
+
+	// Test --health --quick flag (non-interactive JSON output)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, binaryPath, "--health", "--quick")
+	cmd.Env = append(os.Environ(), "HOME="+homeDir)
+	cmd.Dir = tmpDir
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Health command failed: %v\nOutput: %s", err, output)
+	}
+
+	// Verify output is valid JSON
+	outputStr := string(output)
+	if !strings.HasPrefix(outputStr, "{") {
+		t.Fatalf("Health output should be JSON, got: %s", outputStr[:min(100, len(outputStr))])
+	}
+
+	// Verify output contains expected health data fields
+	expectedFields := []string{
+		"\"Terminal\"",
+		"\"Components\"",
+	}
+
+	for _, field := range expectedFields {
+		if !strings.Contains(outputStr, field) {
+			t.Errorf("Health output missing expected field: %s", field)
+		}
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// TestHealthFlagJSON tests the JSON output format from --health --quick.
+func TestHealthFlagJSON(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E test in short mode")
+	}
+
+	projectRoot := getProjectRoot(t)
+
+	tmpDir, err := os.MkdirTemp("", "savanhi-health-json-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Build binary - must run from project root
+	binaryPath := filepath.Join(tmpDir, "savanhi-shell")
+	buildCmd := exec.Command("go", "build", "-o", binaryPath, "./cmd/savanhi-shell")
+	buildCmd.Dir = projectRoot
+	if output, err := buildCmd.CombinedOutput(); err != nil {
+		t.Fatalf("Failed to build binary: %v\n%s", err, output)
+	}
+
+	// Create test home
+	homeDir := filepath.Join(tmpDir, "home")
+	if err := os.MkdirAll(homeDir, 0755); err != nil {
+		t.Fatalf("Failed to create home dir: %v", err)
+	}
+
+	// Test --health --quick flag for JSON output
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, binaryPath, "--health", "--quick")
+	cmd.Env = append(os.Environ(), "HOME="+homeDir)
+	cmd.Dir = tmpDir
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Health command failed: %v\nOutput: %s", err, output)
+	}
+
+	// Verify output is valid JSON by attempting to parse it
+	outputStr := string(output)
+
+	// Check it starts with { (valid JSON object)
+	if !strings.HasPrefix(strings.TrimSpace(outputStr), "{") {
+		t.Fatalf("Expected JSON output starting with '{', got: %s", outputStr[:min(100, len(outputStr))])
+	}
+
+	// Verify required fields are present
+	requiredFields := []string{
+		"\"Terminal\"",   // Terminal capabilities section
+		"\"Components\"", // Installed components section
+		"\"TrueColor\"",  // Terminal capability
+		"\"Installed\"",  // Component status
+	}
+
+	for _, field := range requiredFields {
+		if !strings.Contains(outputStr, field) {
+			t.Errorf("JSON output missing required field: %s", field)
+		}
+	}
+
+	t.Logf("Health JSON output is valid (%d bytes)", len(output))
 }

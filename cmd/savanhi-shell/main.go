@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -58,6 +59,12 @@ var (
 
 	// Verify mode
 	verifyOnly = flag.Bool("verify", false, "Verify existing installation")
+
+	// Health dashboard mode
+	healthMode = flag.Bool("health", false, "Run terminal health dashboard")
+
+	// Quick mode (non-interactive JSON output for --health)
+	healthQuick = flag.Bool("quick", false, "Output health report as JSON (use with --health)")
 
 	// Timeout
 	timeout = flag.Duration("timeout", 10*time.Minute, "Operation timeout")
@@ -118,6 +125,14 @@ func run() error {
 	// Verify mode
 	if *verifyOnly {
 		return runVerify(ctx)
+	}
+
+	// Health dashboard mode
+	if *healthMode {
+		if *healthQuick {
+			return runHealthQuick(ctx)
+		}
+		return runHealth(ctx)
 	}
 
 	// Rollback mode
@@ -340,6 +355,87 @@ func runTUI(ctx context.Context) error {
 	}
 }
 
+func runHealth(ctx context.Context) error {
+	// Create detector
+	d := detector.NewDefaultDetector()
+
+	// Run system detection
+	result, err := d.DetectAll()
+	if err != nil {
+		return errors.DetectionFailed("system", err)
+	}
+
+	// Create TUI model starting at Health Dashboard screen
+	model := tui.NewModel().WithDetector(result)
+	model.CurrentScreen = tui.ScreenHealthDashboard
+
+	// Create Bubble Tea program
+	pProgram := tea.NewProgram(
+		model,
+		tea.WithAltScreen(),
+		tea.WithMouseCellMotion(),
+	)
+
+	// Run in goroutine to handle context cancellation
+	errChan := make(chan error, 1)
+	go func() {
+		if _, err := pProgram.Run(); err != nil {
+			errChan <- err
+		}
+		close(errChan)
+	}()
+
+	// Wait for completion or context cancellation
+	select {
+	case <-ctx.Done():
+		pProgram.Quit()
+		return errors.Canceled("operation")
+	case err := <-errChan:
+		return err
+	}
+}
+
+func runHealthQuick(ctx context.Context) error {
+	// Create detector
+	d := detector.NewDefaultDetector()
+
+	// Run system detection
+	result, err := d.DetectAll()
+	if err != nil {
+		return errors.DetectionFailed("system", err)
+	}
+
+	// Run health checks
+	healthCmd := tui.RunHealthCheckWithDetector(result)
+	msg := healthCmd()
+
+	healthMsg, ok := msg.(tui.HealthCheckCompleteMsg)
+	if !ok {
+		return fmt.Errorf("unexpected health check response")
+	}
+
+	if healthMsg.Err != nil {
+		return healthMsg.Err
+	}
+
+	// Set export path
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+	exportPath := homeDir + "/.config/savanhi-shell/health-report.json"
+	healthMsg.Data.ExportPath = exportPath
+
+	// Output as JSON to stdout
+	jsonData, err := json.MarshalIndent(healthMsg.Data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal health data: %w", err)
+	}
+
+	fmt.Println(string(jsonData))
+	return nil
+}
+
 func printVersion() {
 	fmt.Printf("Savanhi Shell %s\n", version)
 	fmt.Printf("  Git Commit: %s\n", gitCommit)
@@ -365,6 +461,8 @@ OPTIONS:
     --rollback-original    Rollback to original state (full uninstall)
     --detect               Only run system detection
     --verify               Verify existing installation
+    --health               Run terminal health dashboard
+    --health --quick      Output health report as JSON (non-interactive)
     --timeout <DURATION>   Operation timeout (default: 10m)
     --force                Force overwrite existing installations
     --skip-checksum        Skip checksum verification
@@ -378,6 +476,15 @@ INTERACTIVE MODE:
     3. Font selection (Nerd Fonts)
     4. Tool installation (zoxide, fzf, bat, eza)
     5. Preview and confirmation
+
+HEALTH MODE:
+    When run with --health, Savanhi Shell launches the Health Dashboard
+    TUI showing terminal capabilities, installed components, font test,
+    and color test:
+    savanhi-shell --health
+
+    For non-interactive JSON output:
+    savanhi-shell --health --quick
 
 NON-INTERACTIVE MODE:
     When run with --non-interactive, Savanhi Shell reads configuration
@@ -409,6 +516,12 @@ EXAMPLES:
 
     # Verify installation
     savanhi-shell --verify
+
+    # Run terminal health dashboard
+    savanhi-shell --health
+
+    # Output health report as JSON
+    savanhi-shell --health --quick
 
 For more information, visit: https://github.com/savanhi/shell`)
 }
