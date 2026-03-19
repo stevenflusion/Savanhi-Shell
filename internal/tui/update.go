@@ -22,6 +22,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleWelcomeKeys(msg)
 	case ScreenDetect:
 		return m.handleDetectKeys(msg)
+	case ScreenPluginSelect:
+		return m.handlePluginSelectKeys(msg)
 	case ScreenThemeSelect:
 		return m.handleThemeSelectKeys(msg)
 	case ScreenFontSelect:
@@ -55,8 +57,10 @@ func (m Model) handleWelcomeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // handleDetectKeys handles key presses on the detection screen.
 func (m Model) handleDetectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if IsSelectionKey(msg) || IsConfirmKey(msg) {
-		// Move to theme selection after confirming detection
-		m.CurrentScreen = ScreenThemeSelect
+		// Move to plugin selection after confirming detection
+		m.CurrentScreen = ScreenPluginSelect
+		m.Cursor = 0
+		// Plugin detection will be done externally and passed to the model
 		return m, nil
 	}
 
@@ -67,6 +71,66 @@ func (m Model) handleDetectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.Loading = true
 		m.LoadingMessage = "Running health checks..."
 		return m, RunHealthCheck()
+	}
+
+	return m, nil
+}
+
+// handlePluginSelectKeys handles key presses on the plugin selection screen.
+func (m Model) handlePluginSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle navigation (up/down or j/k)
+	if key.Matches(msg, Keys.Up) {
+		if m.Cursor > 0 {
+			m.Cursor--
+		}
+		return m, nil
+	}
+
+	if key.Matches(msg, Keys.Down) {
+		if m.Cursor < len(m.AvailablePlugins)-1 {
+			m.Cursor++
+		}
+		return m, nil
+	}
+
+	// Handle j/k navigation (alternative to arrows)
+	switch msg.String() {
+	case "j":
+		if m.Cursor < len(m.AvailablePlugins)-1 {
+			m.Cursor++
+		}
+		return m, nil
+	case "k":
+		if m.Cursor > 0 {
+			m.Cursor--
+		}
+		return m, nil
+	}
+
+	// Handle space to toggle selection
+	if key.Matches(msg, Keys.Space) {
+		if len(m.AvailablePlugins) > 0 && m.Cursor < len(m.AvailablePlugins) {
+			pluginName := m.AvailablePlugins[m.Cursor].Plugin.Name
+			m.SelectedPlugins[pluginName] = !m.SelectedPlugins[pluginName]
+		}
+		return m, nil
+	}
+
+	// Handle Enter to proceed to theme selection
+	if IsSelectionKey(msg) || IsConfirmKey(msg) {
+		// Move to theme selection
+		m.CurrentScreen = ScreenThemeSelect
+		m.Cursor = 0
+		// Load themes from preview package
+		m.Items = []string{} // Will be populated by theme selection screen
+		return m, nil
+	}
+
+	// Handle Escape to go back to detection screen
+	if IsCancelKey(msg) {
+		m.CurrentScreen = ScreenDetect
+		m.Cursor = 0
+		return m, nil
 	}
 
 	return m, nil
@@ -102,7 +166,7 @@ func (m Model) handleThemeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if IsCancelKey(msg) {
-		m.CurrentScreen = ScreenDetect
+		m.CurrentScreen = ScreenPluginSelect
 		m.Cursor = 0
 		return m, nil
 	}

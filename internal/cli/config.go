@@ -145,3 +145,19 @@ func ValidateConfig(config *Config) error {
 
 	return nil
 }
+
+// ValidatePlugins validates plugin names for installation.
+func ValidatePlugins(plugins []string) error {
+	validPlugins := map[string]bool{
+		"zsh-autosuggestions":     true,
+		"zsh-syntax-highlighting": true,
+	}
+
+	for _, plugin := range plugins {
+		if !validPlugins[plugin] {
+			return fmt.Errorf("unknown plugin: %s (valid: zsh-autosuggestions, zsh-syntax-highlighting)", plugin)
+		}
+	}
+
+	return nil
+}

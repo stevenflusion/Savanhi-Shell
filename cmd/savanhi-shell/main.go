@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -77,6 +78,9 @@ var (
 
 	// Skip post-install verification
 	skipVerify = flag.Bool("skip-verify", false, "Skip post-install verification")
+
+	// Install plugins (comma-separated list or "all")
+	installPlugins = flag.String("install-plugins", "", "Comma-separated list of zsh plugins to install (zsh-autosuggestions,zsh-syntax-highlighting, or all)")
 )
 
 func main() {
@@ -262,6 +266,22 @@ func runNonInteractive(ctx context.Context) error {
 	config.SkipVerification = *skipVerify
 	config.Timeout = *timeout
 
+	// Parse --install-plugins flag
+	if *installPlugins != "" {
+		plugins, err := parsePluginNames(*installPlugins)
+		if err != nil {
+			return err
+		}
+		config.InstallPlugins = plugins
+	}
+
+	// Validate plugin names if specified
+	if len(config.InstallPlugins) > 0 {
+		if err := cli.ValidatePlugins(config.InstallPlugins); err != nil {
+			return err
+		}
+	}
+
 	// Create non-interactive runner
 	runner, err := cli.NewNonInteractiveMode(config, os.Stdout, os.Stderr, *verbose)
 	if err != nil {
@@ -270,6 +290,38 @@ func runNonInteractive(ctx context.Context) error {
 
 	// Run installation
 	return runner.Run(ctx)
+}
+
+// parsePluginNames parses a comma-separated list of plugin names.
+func parsePluginNames(input string) ([]string, error) {
+	if input == "" {
+		return nil, nil
+	}
+
+	plugins := strings.Split(input, ",")
+	result := make([]string, 0, len(plugins))
+
+	validPlugins := map[string]bool{
+		"zsh-autosuggestions":     true,
+		"zsh-syntax-highlighting": true,
+		"all":                     true,
+	}
+
+	for _, plugin := range plugins {
+		plugin = strings.TrimSpace(plugin)
+		if plugin == "" {
+			continue
+		}
+		if !validPlugins[plugin] {
+			return nil, fmt.Errorf("invalid plugin name: %s (valid: zsh-autosuggestions, zsh-syntax-highlighting, all)", plugin)
+		}
+		if plugin == "all" {
+			return []string{"zsh-autosuggestions", "zsh-syntax-highlighting"}, nil
+		}
+		result = append(result, plugin)
+	}
+
+	return result, nil
 }
 
 func runTUI(ctx context.Context) error {
@@ -455,6 +507,7 @@ OPTIONS:
     --help                 Show this help message
     --config <FILE>        Path to configuration file (YAML or JSON)
     --non-interactive      Run in non-interactive mode (for scripting)
+    --install-plugins <LIST>  Install zsh plugins (comma-separated: zsh-autosuggestions,zsh-syntax-highlighting, or "all")
     --dry-run              Perform a dry run without making changes
     --verbose              Enable verbose output
     --rollback             Rollback last installation
@@ -462,7 +515,7 @@ OPTIONS:
     --detect               Only run system detection
     --verify               Verify existing installation
     --health               Run terminal health dashboard
-    --health --quick      Output health report as JSON (non-interactive)
+    --health --quick       Output health report as JSON (non-interactive)
     --timeout <DURATION>   Operation timeout (default: 10m)
     --force                Force overwrite existing installations
     --skip-checksum        Skip checksum verification
@@ -472,10 +525,11 @@ INTERACTIVE MODE:
     When run without flags, Savanhi Shell launches an interactive TUI
     that guides you through:
     1. System detection (OS, shell, terminal, fonts)
-    2. Theme selection (oh-my-posh themes)
-    3. Font selection (Nerd Fonts)
-    4. Tool installation (zoxide, fzf, bat, eza)
-    5. Preview and confirmation
+    2. Plugin selection (zsh-autosuggestions, zsh-syntax-highlighting)
+    3. Theme selection (oh-my-posh themes)
+    4. Font selection (Nerd Fonts)
+    5. Tool installation (zoxide, fzf, bat, eza)
+    6. Preview and confirmation
 
 HEALTH MODE:
     When run with --health, Savanhi Shell launches the Health Dashboard
@@ -492,6 +546,9 @@ NON-INTERACTIVE MODE:
 
     savanhi-shell --non-interactive --config config.json
 
+    Install zsh plugins non-interactively:
+    savanhi-shell --non-interactive --install-plugins zsh-autosuggestions,zsh-syntax-highlighting
+
 EXAMPLES:
     # Run interactive TUI
     savanhi-shell
@@ -504,6 +561,9 @@ EXAMPLES:
 
     # Non-interactive installation
     savanhi-shell --non-interactive --config my-config.json
+
+    # Install zsh plugins
+    savanhi-shell --non-interactive --install-plugins all
 
     # Dry run to see what would be installed
     savanhi-shell --non-interactive --dry-run --config my-config.json

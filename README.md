@@ -28,9 +28,10 @@
 |---------|-------------|
 | **🔍 Live Preview** | See your theme, font, and colors in real-time before committing |
 | **📦 Smart Installation** | Automatic dependency resolution with oh-my-posh, Nerd Fonts, and tools |
+| **🔌 Zsh Plugin Support** | Install and manage zsh-autosuggestions and zsh-syntax-highlighting |
 | **🔄 Safe Rollback** | One command to restore your original configuration |
 | **🖥️ Cross-Platform** | Works on macOS (Intel & Apple Silicon), Linux, and WSL |
-| **🐚 Multi-Shell** | Supports both zsh and bash |
+| **🐚 Multi-Shell** | Supports zsh and bash |
 
 ### What Gets Configured
 
@@ -38,6 +39,8 @@
 |-----------|--------------|
 | **oh-my-posh** | Beautiful prompt themes (Agnoster, Paradox, Powerlevel10k, etc.) |
 | **Nerd Fonts** | Patched fonts with icons and symbols |
+| **zsh-autosuggestions** | Fish-like autosuggestions for zsh |
+| **zsh-syntax-highlighting** | Real-time syntax highlighting for zsh commands |
 | **zoxide** | Smart `cd` command (like `z` but better) |
 | **fzf** | Fuzzy finder for files, history, and more |
 | **bat** | Syntax-highlighted `cat` replacement |
@@ -185,6 +188,8 @@ Options:
   --help                 Show help message
   --config <FILE>        Path to configuration file (JSON)
   --non-interactive      Run without TUI (for scripting/CI)
+  --install-plugins <LIST>  Install zsh plugins (comma-separated)
+                          Valid: zsh-autosuggestions, zsh-syntax-highlighting, all
   --dry-run              Preview changes without applying
   --detect               Only run system detection
   --verify               Verify existing installation
@@ -206,6 +211,7 @@ cat > config.json << EOF
 {
   "theme": "agnoster",
   "font": "JetBrainsMono Nerd Font",
+  "install_plugins": ["zsh-autosuggestions", "zsh-syntax-highlighting"],
   "tools": ["zoxide", "fzf", "bat", "eza"],
   "dry_run": false
 }
@@ -214,6 +220,23 @@ EOF
 # Run non-interactive
 savanhi-shell --non-interactive --config config.json
 ```
+
+### Install Zsh Plugins
+
+Install zsh plugins non-interactively:
+
+```bash
+# Install specific plugins
+savanhi-shell --non-interactive --install-plugins zsh-autosuggestions,zsh-syntax-highlighting
+
+# Install all plugins
+savanhi-shell --non-interactive --install-plugins all
+```
+
+Plugin installation methods (in order of preference):
+1. **Oh My Zsh**: If OMZ detected, plugins are added to `plugins=()` array
+2. **Homebrew**: If brew available, installs via `brew install`
+3. **Git Clone**: Fallback, clones to `~/.zsh/` and adds source line
 
 ### Health Check
 

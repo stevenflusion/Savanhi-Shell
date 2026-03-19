@@ -66,6 +66,10 @@ type Config struct {
 	// InstallEza installs eza.
 	InstallEza bool `json:"install_eza"`
 
+	// InstallPlugins are the zsh plugins to install (comma-separated names).
+	// Valid values: zsh-autosuggestions, zsh-syntax-highlighting
+	InstallPlugins []string `json:"install_plugins"`
+
 	// SkipChecksum skips checksum verification.
 	SkipChecksum bool `json:"skip_checksum"`
 

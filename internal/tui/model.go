@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/savanhi/shell/internal/detector"
+	"github.com/savanhi/shell/internal/installer"
 	"github.com/savanhi/shell/internal/persistence"
 )
 
@@ -15,6 +16,7 @@ type Screen int
 const (
 	ScreenWelcome Screen = iota
 	ScreenDetect
+	ScreenPluginSelect
 	ScreenThemeSelect
 	ScreenFontSelect
 	ScreenPreview
@@ -30,6 +32,8 @@ func (s Screen) String() string {
 		return "Welcome"
 	case ScreenDetect:
 		return "Detect"
+	case ScreenPluginSelect:
+		return "PluginSelect"
 	case ScreenThemeSelect:
 		return "ThemeSelect"
 	case ScreenFontSelect:
@@ -88,6 +92,10 @@ type Model struct {
 	// Font selection
 	SelectedFont string
 
+	// Plugin selection
+	AvailablePlugins []installer.PluginStatus // Detected plugins with status
+	SelectedPlugins  map[string]bool          // User-selected plugins
+
 	// Loading state
 	Loading        bool
 	LoadingMessage string
@@ -114,10 +122,11 @@ type SystemInfo struct {
 // NewModel creates a new TUI model.
 func NewModel() Model {
 	return Model{
-		CurrentScreen: ScreenWelcome,
-		Selected:      make(map[string]bool),
-		Ready:         false,
-		Quitting:      false,
+		CurrentScreen:   ScreenWelcome,
+		Selected:        make(map[string]bool),
+		SelectedPlugins: make(map[string]bool),
+		Ready:           false,
+		Quitting:        false,
 	}
 }
 
@@ -212,6 +221,8 @@ func (m Model) View() string {
 		return m.renderWelcome()
 	case ScreenDetect:
 		return m.renderDetect()
+	case ScreenPluginSelect:
+		return m.renderPluginSelect()
 	case ScreenThemeSelect:
 		return m.renderThemeSelect()
 	case ScreenFontSelect:

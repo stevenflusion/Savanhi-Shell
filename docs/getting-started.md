@@ -62,22 +62,39 @@ Savanhi Shell automatically detects:
 - Your current shell (zsh/bash)
 - Your terminal emulator
 - Installed Nerd Fonts
+- Oh My Zsh installation status
 
-### 2. Theme Selection
+### 2. Plugin Selection (Zsh Only)
+
+For zsh users, Savanhi Shell can install popular plugins:
+
+| Plugin | Description |
+|--------|-------------|
+| **zsh-autosuggestions** | Fish-like autosuggestions based on your command history |
+| **zsh-syntax-highlighting** | Real-time syntax highlighting for commands |
+
+Plugins are installed using the best method for your setup:
+- **Oh My Zsh**: Added to `plugins=()` array (recommended)
+- **Homebrew**: Installed via `brew install` if available
+- **Git Clone**: Cloned to `~/.zsh/` as fallback
+
+> **Note:** zsh-syntax-highlighting must be loaded last. Savanhi Shell handles this automatically.
+
+### 3. Theme Selection
 
 Browse available oh-my-posh themes:
 - Use `j`/`k` or arrow keys to navigate
 - Press `Enter` to select
 - Press `p` to preview the theme
 
-### 3. Font Selection
+### 4. Font Selection
 
 Choose a Nerd Font to install:
 - Recommended: MesloLGS NF (works best with most themes)
 - Use arrow keys to browse
 - Press `Enter` to select
 
-### 4. Tool Installation
+### 5. Tool Installation
 
 Select which productivity tools to install:
 - **zoxide**: Smart `cd` command
@@ -85,13 +102,13 @@ Select which productivity tools to install:
 - **bat**: Better `cat` with syntax highlighting
 - **eza**: Modern `ls` replacement
 
-### 5. Preview
+### 6. Preview
 
 See your configuration before committing:
 - Live preview in a subshell
 - Verify everything looks correct
 
-### 6. Install
+### 7. Install
 
 Apply your changes:
 - Automatic backup created
@@ -105,13 +122,23 @@ Apply your changes:
 Savanhi Shell adds sections to your `.zshrc` or `.bashrc`:
 
 ```bash
-# >>> savanhi-oh-my-posh >>>
-# Savanhi-managed oh-my-posh configuration
+# >>> savanhi-main >>>
+# Savanhi Shell Configuration
+# <<< savanhi-main <<<
+
+# >>> savanhi-zsh-autosuggestions >>>
+source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+# <<< savanhi-zsh-autosuggestions <<<
+
+# >>> savanhi-zsh-syntax-highlighting >>>
+source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+# <<< savanhi-zsh-syntax-highlighting <<<
+
+# >>> savanhi-omp >>>
 eval "$(oh-my-posh init zsh --config ~/.config/savanhi/themes/powerlevel10k.omp.json)"
-# <<< savanhi-oh-my-posh <<<
+# <<< savanhi-omp <<<
 
 # >>> savanhi-tools >>>
-# Savanhi-managed tool configurations
 eval "$(zoxide init zsh)"
 eval "$(fzf --zsh)"
 alias cat='bat --paging=never'
@@ -125,6 +152,19 @@ alias ls='eza'
 - `~/.config/savanhi/original-backup.json` - Your original configuration
 - `~/.config/savanhi/preferences.json` - Your preferences
 - `~/.config/savanhi/themes/` - Downloaded themes
+- `~/.zsh/` - Plugin directory (for git clone installations)
+
+## Non-Interactive Plugin Installation
+
+Install zsh plugins from the command line:
+
+```bash
+# Install specific plugins
+savanhi-shell --non-interactive --install-plugins zsh-autosuggestions,zsh-syntax-highlighting
+
+# Install all available plugins
+savanhi-shell --non-interactive --install-plugins all
+```
 
 ## Next Steps
 

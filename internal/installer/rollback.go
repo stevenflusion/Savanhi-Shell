@@ -293,6 +293,10 @@ func (r *RollbackManager) uninstallComponent(name string) error {
 	case "eza":
 		// eza is usually installed via package manager, skip
 		return nil
+	case "zsh-autosuggestions", "zsh-syntax-highlighting":
+		// Zsh plugins are handled by PluginInstaller
+		pluginInstaller := NewPluginInstaller(r.context, r.shell)
+		return pluginInstaller.Uninstall(name)
 	default:
 		return fmt.Errorf("unknown component: %s", name)
 	}

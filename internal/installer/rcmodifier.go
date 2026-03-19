@@ -65,6 +65,12 @@ const (
 
 	// Path modifications.
 	SectionPath = "savanhi-path"
+
+	// Zsh Autosuggestions plugin.
+	SectionZshAutosuggestions = "savanhi-zsh-autosuggestions"
+
+	// Zsh Syntax Highlighting plugin.
+	SectionZshSyntaxHighlighting = "savanhi-zsh-syntax-highlighting"
 )
 
 // Backup creates a backup of the RC file.
@@ -218,6 +224,8 @@ func (m *RCModifier) RemoveAllSections() error {
 		SectionBat,
 		SectionEza,
 		SectionPath,
+		SectionZshAutosuggestions,
+		SectionZshSyntaxHighlighting,
 	}
 
 	for _, section := range sections {
@@ -240,6 +248,8 @@ func (m *RCModifier) GetSavanhiSections() (map[string]string, error) {
 		SectionBat,
 		SectionEza,
 		SectionPath,
+		SectionZshAutosuggestions,
+		SectionZshSyntaxHighlighting,
 	}
 
 	result := make(map[string]string)
@@ -306,4 +316,186 @@ func (m *RCModifier) PrepareForInstall() error {
 
 	// Inject main section
 	return m.InjectMainSection()
+}
+
+// InjectZshPlugin injects a zsh plugin source line into the RC file.
+// This is used for Homebrew and Git Clone installation methods.
+// The plugin is added with a section marker for easy removal.
+func (m *RCModifier) InjectZshPlugin(plugin Plugin, sourcePath string) error {
+	// Get the appropriate section marker for this plugin
+	marker := m.getPluginSectionMarker(plugin.Name)
+
+	// Build the source content
+	content := fmt.Sprintf("# Source %s\nsource %s\n", plugin.DisplayName, sourcePath)
+
+	// Inject using the standard section mechanism
+	return m.InjectSection(marker, content)
+}
+
+// RemoveZshPlugin removes a zsh plugin section from the RC file.
+func (m *RCModifier) RemoveZshPlugin(pluginName string) error {
+	marker := m.getPluginSectionMarker(pluginName)
+	return m.RemoveSection(marker)
+}
+
+// getPluginSectionMarker returns the section marker for a plugin.
+func (m *RCModifier) getPluginSectionMarker(pluginName string) string {
+	switch pluginName {
+	case "zsh-autosuggestions":
+		return SectionZshAutosuggestions
+	case "zsh-syntax-highlighting":
+		return SectionZshSyntaxHighlighting
+	default:
+		// Generate a marker name from the plugin name
+		return "savanhi-" + strings.TrimPrefix(pluginName, "zsh-")
+	}
+}
+
+// AddPluginToSection adds a source line to an existing plugin section.
+// If the section doesn't exist, it creates one.
+func (m *RCModifier) AddPluginToSection(plugin Plugin, sourcePath string) error {
+	marker := m.getPluginSectionMarker(plugin.Name)
+
+	// Check if section exists
+	hasSection, err := m.HasSection(marker)
+	if err != nil {
+		return fmt.Errorf("failed to check section: %w", err)
+	}
+
+	if hasSection {
+		// Get existing content
+		content, err := m.GetSection(marker)
+		if err != nil {
+			return fmt.Errorf("failed to get section: %w", err)
+		}
+
+		// Check if already sourced
+		if strings.Contains(content, sourcePath) {
+			return nil // Already added
+		}
+
+		// Append to existing content
+		content = fmt.Sprintf("%s\nsource %s", content, sourcePath)
+		return m.InjectSection(marker, content)
+	}
+
+	// Create new section
+	return m.InjectZshPlugin(plugin, sourcePath)
+}
+
+// EnsurePluginOrder ensures that zsh-syntax-highlighting is sourced last.
+// This is required because syntax-highlighting must be loaded after all other plugins.
+// For OMZ: it must be last in the plugins array.
+// For manual sourcing: the source line must be at the end of .zshrc.
+func (m *RCModifier) EnsurePluginOrder(plugins []Plugin) error {
+	// Find zsh-syntax-highlighting in the list
+	var syntaxHighlightingPlugin *Plugin
+	for i := range plugins {
+		if plugins[i].MustBeLast {
+			syntaxHighlightingPlugin = &plugins[i]
+			break
+		}
+	}
+
+	if syntaxHighlightingPlugin == nil {
+		// No plugin requires being last, no action needed
+		return nil
+	}
+
+	// Check if syntax-highlighting section exists
+	marker := m.getPluginSectionMarker(syntaxHighlightingPlugin.Name)
+	hasSection, err := m.HasSection(marker)
+	if err != nil {
+		return fmt.Errorf("failed to check section: %w", err)
+	}
+
+	if !hasSection {
+		// No section to reorder
+		return nil
+	}
+
+	// For manual source installations, we need to ensure the syntax-highlighting
+	// section is at the very end of the file.
+	// We do this by removing and re-adding the section.
+	content, err := m.GetSection(marker)
+	if err != nil {
+		return fmt.Errorf("failed to get section content: %w", err)
+	}
+
+	// Check if there are plugins after syntax-highlighting that also have sections
+	// This is a warning condition
+	otherPluginsAfter := m.checkForPluginsAfter(syntaxHighlightingPlugin.Name)
+	if len(otherPluginsAfter) > 0 {
+		// Move syntax-highlighting to end
+		// First remove it
+		if err := m.RemoveSection(marker); err != nil {
+			return fmt.Errorf("failed to remove section: %w", err)
+		}
+		// Then re-add it at the end
+		return m.InjectSection(marker, content)
+	}
+
+	return nil
+}
+
+// checkForPluginsAfter checks if there are other plugin sections after the given plugin.
+func (m *RCModifier) checkForPluginsAfter(pluginName string) []string {
+	// Get RC content
+	rcContent, err := m.shell.ReadRC()
+	if err != nil {
+		return nil
+	}
+
+	marker := m.getPluginSectionMarker(pluginName)
+	startMarker := "# >>> " + marker + " >>>"
+
+	// Find the position of this plugin's section
+	pluginIdx := strings.Index(rcContent, startMarker)
+	if pluginIdx == -1 {
+		return nil
+	}
+
+	// Check for other plugin sections after this one
+	var pluginsAfter []string
+	allMarkers := []string{SectionZshAutosuggestions, SectionZshSyntaxHighlighting}
+
+	for _, otherMarker := range allMarkers {
+		if otherMarker == marker {
+			continue
+		}
+
+		otherStartMarker := "# >>> " + otherMarker + " >>>"
+		otherIdx := strings.Index(rcContent, otherStartMarker)
+		if otherIdx > pluginIdx {
+			pluginsAfter = append(pluginsAfter, otherMarker)
+		}
+	}
+
+	return pluginsAfter
+}
+
+// HasZshPluginSection checks if a plugin section exists.
+func (m *RCModifier) HasZshPluginSection(pluginName string) (bool, error) {
+	marker := m.getPluginSectionMarker(pluginName)
+	return m.HasSection(marker)
+}
+
+// GetZshPluginSection returns the content of a plugin section.
+func (m *RCModifier) GetZshPluginSection(pluginName string) (string, error) {
+	marker := m.getPluginSectionMarker(pluginName)
+	return m.GetSection(marker)
+}
+
+// RemoveAllPluginSections removes all zsh plugin sections from the RC file.
+func (m *RCModifier) RemoveAllPluginSections() error {
+	sections := []string{SectionZshAutosuggestions, SectionZshSyntaxHighlighting}
+
+	for _, section := range sections {
+		if err := m.RemoveSection(section); err != nil {
+			// Log but continue
+			fmt.Printf("Warning: failed to remove plugin section %s: %v\n", section, err)
+		}
+	}
+
+	return nil
 }

@@ -256,6 +256,49 @@ func TestNonInteractiveModeNewConfig(t *testing.T) {
 	}
 }
 
+func TestValidatePlugins(t *testing.T) {
+	tests := []struct {
+		name    string
+		plugins []string
+		wantErr bool
+	}{
+		{
+			name:    "empty list",
+			plugins: []string{},
+			wantErr: false,
+		},
+		{
+			name:    "valid single plugin",
+			plugins: []string{"zsh-autosuggestions"},
+			wantErr: false,
+		},
+		{
+			name:    "valid multiple plugins",
+			plugins: []string{"zsh-autosuggestions", "zsh-syntax-highlighting"},
+			wantErr: false,
+		},
+		{
+			name:    "invalid plugin",
+			plugins: []string{"invalid-plugin"},
+			wantErr: true,
+		},
+		{
+			name:    "mixed valid and invalid",
+			plugins: []string{"zsh-autosuggestions", "invalid"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := cli.ValidatePlugins(tt.plugins)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidatePlugins() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestInitConfig(t *testing.T) {
 	tmpFile, err := os.CreateTemp("", "init-config-*.json")
 	if err != nil {

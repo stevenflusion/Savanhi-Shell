@@ -329,6 +329,11 @@ func (m Model) renderFooter() string {
 		keys = append(keys, styles.FormatKey("Enter", "Continue"))
 		keys = append(keys, styles.FormatKey("H", "Health"))
 		keys = append(keys, styles.FormatKey("Esc", "Back"))
+	case ScreenPluginSelect:
+		keys = append(keys, styles.FormatKey("↑↓/jk", "Navigate"))
+		keys = append(keys, styles.FormatKey("Space", "Toggle"))
+		keys = append(keys, styles.FormatKey("Enter", "Continue"))
+		keys = append(keys, styles.FormatKey("Esc", "Back"))
 	case ScreenThemeSelect, ScreenFontSelect:
 		keys = append(keys, styles.FormatKey("↑↓", "Navigate"))
 		keys = append(keys, styles.FormatKey("Enter", "Select"))

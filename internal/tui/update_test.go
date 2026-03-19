@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/savanhi/shell/internal/installer"
 )
 
 func TestHandleKeyPressQuit(t *testing.T) {
@@ -109,16 +110,157 @@ func TestHandleDetectKeys(t *testing.T) {
 	m := NewModel()
 	m.CurrentScreen = ScreenDetect
 
-	// Test enter key moves to theme select
+	// Test enter key moves to plugin select (new flow)
 	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = newModel.(Model)
 
-	if m.CurrentScreen != ScreenThemeSelect {
-		t.Errorf("expected screen ThemeSelect, got %v", m.CurrentScreen)
+	if m.CurrentScreen != ScreenPluginSelect {
+		t.Errorf("expected screen PluginSelect, got %v", m.CurrentScreen)
 	}
 
 	if cmd != nil {
-		t.Error("expected no command from ThemeSelect transition")
+		t.Error("expected no command from PluginSelect transition")
+	}
+}
+
+func TestHandlePluginSelectKeys(t *testing.T) {
+	tests := []struct {
+		name              string
+		key               tea.KeyMsg
+		cursor            int
+		availablePlugins  []installer.PluginStatus
+		selectedPlugins   map[string]bool
+		wantScreen        Screen
+		wantCursor        int
+		wantSelectedCount int
+		wantSelected      map[string]bool
+	}{
+		{
+			name:   "enter moves to theme select",
+			key:    tea.KeyMsg{Type: tea.KeyEnter},
+			cursor: 0,
+			availablePlugins: []installer.PluginStatus{
+				{Plugin: installer.Plugin{Name: "zsh-autosuggestions"}},
+			},
+			selectedPlugins: map[string]bool{},
+			wantScreen:      ScreenThemeSelect,
+			wantCursor:      0,
+		},
+		{
+			name:   "space toggles plugin selection",
+			key:    tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}},
+			cursor: 0,
+			availablePlugins: []installer.PluginStatus{
+				{Plugin: installer.Plugin{Name: "zsh-autosuggestions"}},
+			},
+			selectedPlugins: map[string]bool{},
+			wantScreen:      ScreenPluginSelect,
+			wantCursor:      0,
+			wantSelected:    map[string]bool{"zsh-autosuggestions": true},
+		},
+		{
+			name:   "space untoggles plugin selection",
+			key:    tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}},
+			cursor: 0,
+			availablePlugins: []installer.PluginStatus{
+				{Plugin: installer.Plugin{Name: "zsh-autosuggestions"}},
+			},
+			selectedPlugins: map[string]bool{"zsh-autosuggestions": true},
+			wantScreen:      ScreenPluginSelect,
+			wantCursor:      0,
+			wantSelected:    map[string]bool{"zsh-autosuggestions": false},
+		},
+		{
+			name:   "escape goes back to detect",
+			key:    tea.KeyMsg{Type: tea.KeyEsc},
+			cursor: 1,
+			availablePlugins: []installer.PluginStatus{
+				{Plugin: installer.Plugin{Name: "zsh-autosuggestions"}},
+			},
+			selectedPlugins: map[string]bool{},
+			wantScreen:      ScreenDetect,
+			wantCursor:      0,
+		},
+		{
+			name:   "down arrow moves cursor",
+			key:    tea.KeyMsg{Type: tea.KeyDown},
+			cursor: 0,
+			availablePlugins: []installer.PluginStatus{
+				{Plugin: installer.Plugin{Name: "plugin1"}},
+				{Plugin: installer.Plugin{Name: "plugin2"}},
+			},
+			selectedPlugins: map[string]bool{},
+			wantScreen:      ScreenPluginSelect,
+			wantCursor:      1,
+		},
+		{
+			name:   "up arrow moves cursor",
+			key:    tea.KeyMsg{Type: tea.KeyUp},
+			cursor: 1,
+			availablePlugins: []installer.PluginStatus{
+				{Plugin: installer.Plugin{Name: "plugin1"}},
+				{Plugin: installer.Plugin{Name: "plugin2"}},
+			},
+			selectedPlugins: map[string]bool{},
+			wantScreen:      ScreenPluginSelect,
+			wantCursor:      0,
+		},
+		{
+			name:   "j key moves down",
+			key:    tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+			cursor: 0,
+			availablePlugins: []installer.PluginStatus{
+				{Plugin: installer.Plugin{Name: "plugin1"}},
+				{Plugin: installer.Plugin{Name: "plugin2"}},
+			},
+			selectedPlugins: map[string]bool{},
+			wantScreen:      ScreenPluginSelect,
+			wantCursor:      1,
+		},
+		{
+			name:   "k key moves up",
+			key:    tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}},
+			cursor: 1,
+			availablePlugins: []installer.PluginStatus{
+				{Plugin: installer.Plugin{Name: "plugin1"}},
+				{Plugin: installer.Plugin{Name: "plugin2"}},
+			},
+			selectedPlugins: map[string]bool{},
+			wantScreen:      ScreenPluginSelect,
+			wantCursor:      0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewModel()
+			m.CurrentScreen = ScreenPluginSelect
+			m.Cursor = tt.cursor
+			m.AvailablePlugins = tt.availablePlugins
+			m.SelectedPlugins = tt.selectedPlugins
+			if m.SelectedPlugins == nil {
+				m.SelectedPlugins = make(map[string]bool)
+			}
+
+			newModel, _ := m.Update(tt.key)
+			m = newModel.(Model)
+
+			if m.CurrentScreen != tt.wantScreen {
+				t.Errorf("expected screen %v, got %v", tt.wantScreen, m.CurrentScreen)
+			}
+
+			if m.Cursor != tt.wantCursor {
+				t.Errorf("expected cursor %d, got %d", tt.wantCursor, m.Cursor)
+			}
+
+			if tt.wantSelected != nil {
+				for plugin, want := range tt.wantSelected {
+					if got := m.SelectedPlugins[plugin]; got != want {
+						t.Errorf("SelectedPlugins[%s] = %v, want %v", plugin, got, want)
+					}
+				}
+			}
+		})
 	}
 }
 
@@ -220,11 +362,11 @@ func TestHandleThemeSelectKeysActions(t *testing.T) {
 			wantSelected: true,
 		},
 		{
-			name:       "escape goes back to detect",
+			name:       "escape goes back to plugin select",
 			key:        tea.KeyMsg{Type: tea.KeyEsc},
 			cursor:     1,
 			items:      []string{"theme1", "theme2"},
-			wantScreen: ScreenDetect,
+			wantScreen: ScreenPluginSelect,
 			wantCursor: 0,
 		},
 	}
